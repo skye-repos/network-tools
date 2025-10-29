@@ -54,8 +54,6 @@ function erdos_renyi(N, p)
 
     n_edges = Int(ceil(N*(N-1)*p/2))
 
-    println(n_edges)
-
     if p < 0.1
         for _ = 1:n_edges
             i = Int.(rand(1:N))
