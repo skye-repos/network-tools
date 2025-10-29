@@ -1,10 +1,4 @@
-* Network Tools
-Please ignore this, I'm just keeping this to track the scripts I'm using.
-
-* Todo
-- [X] Simple un-directed Networks
-  - [X] Degree of a node
-  - [X] Nearest neighbor degrees
-  - [X] Average of nearest neighbor degrees
-- [ ] Network parsing for easier testing (CSV's maybe?)
-- [ ] Defining the network data type
+* Overview
+  - Graph struct
+  - common network operations like neighbors, degrees, distribution
+  - ways to create a Barabasi-Albert & Erdos-Renyi network
