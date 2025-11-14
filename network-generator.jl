@@ -17,7 +17,7 @@ Computes the next barabasi-albert iteration of a network `g` where a new node br
 """
 function ba_step!(g::Graph, m::Int64)
     # Create a pool of nodes weighted by their degree
-    pool = vcat([fill(i, g.degrees[i]) for i in 1:g.N]...)
+    pool = vcat([fill(i, degrees(g)[i]) for i in 1:size(g)]...)
     targets = Int[]
     while length(targets) < m
         v = rand(pool)
@@ -25,12 +25,11 @@ function ba_step!(g::Graph, m::Int64)
     end
 
     for v in targets
-        push!(g.adjacency_list[v], g.N+1)
-        g.degrees[v] += 1
+        push!(g.adjacency_list[v], size(g)+1)
+        degrees(g)[v] += 1
     end
 
-    g.N += 1
-    push!(g.degrees, m)
+    push!(degrees(g), m)
     push!(g.adjacency_list, targets)
 
     return g
@@ -51,6 +50,7 @@ Generate Erdos-Renyi random network G(N, p)
 """ 
 function erdos_renyi(N, p)
     adjacency_list = [Vector{Int64}() for _ = 1:N]
+    g = Graph(adjacency_list)
 
     n_edges = Int(ceil(N*(N-1)*p/2))
 
@@ -61,19 +61,17 @@ function erdos_renyi(N, p)
             while j ∈ adjacency_list[i]
                 j = Int.(rand(1:N))
             end
-            push!(adjacency_list[i], j)
-            push!(adjacency_list[j], i)
+            add_link!(g, Int(i), Int(j))
         end
     else
         for i = 1:N
             for j = 1:N
                 u = rand()
                 if u < p
-                    push!(adjacency_list[Int(i)], Int(j))
-                    push!(adjacency_list[Int(j)], Int(i))
+                    add_link!(g, Int(i), Int(j))
                 end
             end
         end
     end
-    return Graph(adjacency_list)
+    return g
 end

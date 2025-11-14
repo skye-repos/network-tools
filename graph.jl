@@ -1,21 +1,38 @@
+abstract type AbstractGraph end
+
 """
 An un-directed graph for a simple network specified by an adjacency list (no multi-links)
 """
-mutable struct Graph
+mutable struct Graph <: AbstractGraph
     adjacency_list::Vector{Vector{Int64}}
-    degrees::Vector{Int64}
-    N::Int64
+end
 
-    function Graph(adjacency_list::Vector{Vector{Int64}})
-        N = length(adjacency_list)
-        degrees = zeros(Int64, N)
+"""
+Gets the number of nodes in the network `g`
+"""
+function size(g::Graph)
+    return length(g.adjacency_list)
+end
 
-        for (i, list) in enumerate(adjacency_list)
-            degrees[i] = length(list)
-        end
-
-        new(adjacency_list, degrees, N)
+"""
+Gets a vector of node degrees for a network `g`
+"""
+function degrees(g::Graph)
+    N = size(g)
+    d = zeros(Int64, N)
+	for (i, list) in enumerate(g.adjacency_list)
+        d[i] = length(list)
     end
+
+    return d
+end
+
+"""
+Create a copy of a mutable graph
+"""
+function copy(g::Graph)
+    a = Base.deepcopy(g.adjacency_list)
+    return Graph(a)
 end
 
 """
@@ -29,7 +46,7 @@ end
 Average degree of a network `g`
 """
 function k_average(g::Graph)
-	return sum(g.degrees) / g.N
+    return sum(degrees(g)) / size(g)
 end
 
 """
@@ -38,16 +55,107 @@ Returns two objects - the first is the list of degrees
 and the second is the distribution
 """
 function degree_distribution(g::Graph)
-    k_max = maximum(g.degrees)
-    k_min = minimum(g.degrees)
+    k_max = maximum(degrees(g))
+    k_min = minimum(degrees(g))
     p = zeros(k_max)
-    for k ∈ g.degrees
+    for k ∈ degrees(g)
         if k ≠ 0
-            p[k] += 1 / g.N
+            p[k] += 1 / size(g)
         end
     end
     
     k_min == 0 ? k_min = 1 : nothing
     
     return collect(k_min:k_max), p[k_min:k_max]
+end
+
+"""
+Modify a graph `g` in-place to remove a link between (`n1`, `n2`)
+"""
+function remove_link!(g::Graph, n1::Int64, n2::Int64)
+    g.adjacency_list[n1] = filter(e -> e ≠ n2, g.adjacency_list[n1])
+    g.adjacency_list[n2] = filter(e -> e ≠ n1, g.adjacency_list[n2])
+    return nothing
+end
+
+"""
+Modify a graph `g` in-place to add a link between (`n1`, `n2`)
+"""
+function add_link!(g::Graph, n1::Int64, n2::Int64)
+    if n1 > size(g) || n2 > size(g)
+        resize!(g.adjacency_list, max(n1, n2))
+        g.adjacency_list[n1] = Vector{Int}()
+        g.adjacency_list[n2] = Vector{Int}()
+        push!(g.adjacency_list[n1], n2)
+        push!(g.adjacency_list[n2], n1)
+    else
+        push!(g.adjacency_list[n1], n2)
+        push!(g.adjacency_list[n2], n1)
+    end
+    return nothing
+end
+
+"""
+Get the edge-list from the adjacency list of a graph `g`
+"""
+function edges(g::Graph)
+    adj = g.adjacency_list
+    N = size(g)
+
+    el::Vector{Tuple} = []
+
+    for i = 1:N, j=i+1:N
+        if j ∈ adj[i]
+            push!(el, Int.((i, j)))
+        end
+    end
+
+    return el
+end
+
+"""
+Count the number of edges in the graph `g`
+"""
+function edge_count(g::Graph)
+    adj = g.adjacency_list
+    N = size(g)
+
+    count::Int64 = 0
+    
+    for i = 1:N, j = i+1:N
+        if j ∈ adj[i] || i ∈ adj[j]
+            count += 1
+        end
+    end
+
+    return count
+end
+
+"""
+Converts an edge-list to a graph
+"""
+function graph_from_edges(el::Vector{Tuple})
+    N = max(maximum(first.(el)), maximum(last.(el)))
+    adj = [Vector{Int}() for _ = 1:N]
+    g = Graph(adj)
+    for (i, j) in el
+        add_link!(g, Int(i), Int(j))
+    end
+    return g
+end
+
+"""
+Returns a list of nodes that have links in a network `g`
+"""
+function has_links(g::Graph)
+    r = []
+    adj = g.adjacency_list
+
+    for i ∈ eachindex(adj)
+        if adj[i] ≠ []
+            push!(r, i)
+        end
+    end
+        
+    return r
 end
