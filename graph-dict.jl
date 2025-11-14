@@ -7,6 +7,13 @@ mutable struct Graph{T} <: AbstractGraph where {T<:Union{String,Integer}}
 end
 
 """
+Default Graph constructor to give integer valued node labels
+"""
+function Graph()
+    return Graph(Dict{Int,Vector{Int}}())
+end
+
+"""
 Converts an vector of adjacency lists to a dictionary where the value attached to a key (a node label) are the (out)neighbors of the node.
 """
 function adjList_to_dict(adjacency::Vector{Vector{T}}) where {T<:Integer}
@@ -189,7 +196,7 @@ function edges(
             end
         end
     end
-    
+
     return el
 end
 
@@ -200,8 +207,14 @@ function edge_count(g::Graph; directed=false)
     return length(edges(g, directed=directed))
 end
 
-adj = Dict{Int,Vector{Int}}()
-g = Graph(adj)
+"""
+Returns a list of nodes in the graph `g`
+"""
+function nodes(g::Graph)
+    return keys(g.adjacency_list)
+end
+
+g = Graph()
 add_link!(g, 3, 55)
 add_link!(g, 3, [33, 25, 5, 1, 2])
 add_link!(g, 2, [5, 33, 25])
@@ -210,5 +223,6 @@ deg = degrees(g)
 degree_average(g)
 delete_link!(g, 3, 55)
 delete_link!(g, 3, [33, 25, 5, 1, 2])
+nodes(g)
 
 

@@ -26,10 +26,8 @@ function ba_step!(g::Graph, m::Int64)
 
     for v in targets
         push!(g.adjacency_list[v], size(g)+1)
-        degrees(g)[v] += 1
     end
 
-    push!(degrees(g), m)
     push!(g.adjacency_list, targets)
 
     return g
