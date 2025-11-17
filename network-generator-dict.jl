@@ -131,9 +131,9 @@ function θ_weights(g::Graph; θ=1.0)
     return w
 end
 
-@time grph = ζ_model(150, 15, 5);
-@time wts = θ_weights(grph, θ=0.5);
-@time sprs_wts = sparse(wts)
-@time wtd_grph = weights_to_weightedGraph(sprs_wts)
+# @time grph = ζ_model(150, 15, 5);
+# @time wts = θ_weights(grph, θ=0.5);
+# @time sprs_wts = sparse(wts)
+# @time wtd_grph = weights_to_weightedGraph(sprs_wts)
 
-varinfo(r"grph|wtd_grph|wts|sprs_wts")
+# varinfo(r"grph|wtd_grph|wts|sprs_wts")

@@ -1,5 +1,5 @@
 * Overview
-  - Graph struct (will be dictionary based)
+  - Graph struct
   - common network operations like neighbors, degrees, distribution
   - ways to create a Barabasi-Albert & Erdos-Renyi network
   - dijkstras, betweenness-centrality, giant-component
