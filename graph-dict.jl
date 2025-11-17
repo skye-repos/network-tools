@@ -16,7 +16,7 @@ end
 """
 Converts an vector of adjacency lists to a dictionary where the value attached to a key (a node label) are the (out)neighbors of the node.
 """
-function adjList_to_dict(adjacency::Vector{Vector{T}}) where {T<:Integer}
+function adjacency_to_graph(adjacency::Vector{Vector{T}}) where {T<:Integer}
     dict = Dict{T,Vector{T}}()
 
     for i ∈ eachindex(adjacency)
@@ -25,7 +25,7 @@ function adjList_to_dict(adjacency::Vector{Vector{T}}) where {T<:Integer}
         end
     end
 
-    return dict
+    return Graph(dict)
 end
 
 """
@@ -39,24 +39,28 @@ end
 """
 Gets the number of nodes in the network `g`
 """
-function size(g::Graph{T}) where {T<:Union{String,Integer}}
+function size(g::AbstractGraph)
     return length(keys(g.adjacency_list))
 end
 
 """
-Returns a vector of neighbors for `node` in graph `g`. If the graph was directed, the vector is a list of out-neighbors (i.e nodes who have a link pointing to them from the node label)
+Returns a vector of neighbors for `node` in graph `g`. If the graph was directed, the vector is a list of in-neighbors
 """
 function neighbors(g::Graph{T}, node::T) where {T<:Union{String,Integer}}
-    return get(g.adjacency_list, node, nothing)
+    if !isnothing(get(g.adjacency_list, node, nothing))
+        return g.adjacency_list[node]
+    else
+        return nothing
+    end
 end
 
 """
 Returns a dictionary where the keys are node labels, and the values are the degrees. If the graph `g` is directed, then the values represent out-degrees.
 """
-function degrees(g::Graph{T}) where {T<:Union{String,Integer}}
+function degrees(g::AbstractGraph) where {T<:Union{String,Integer}}
     d = Dict{T,Int}()
     for key ∈ keys(g.adjacency_list)
-        get!(d, key, length(g.adjacency_list[key]))
+        d[key] = length(g.adjacency_list[key])
     end
 
     return d
@@ -65,7 +69,7 @@ end
 """
 Average degree of a network `g`
 """
-function degree_average(g::Graph)
+function degree_average(g::AbstractGraph)
     return sum(values(degrees(g))) / size(g)
 end
 
@@ -74,7 +78,7 @@ Compute the degree distribution of a network `g`.
 Returns two objects - the first is the list of degrees
 and the second is the distribution
 """
-function degree_distribution(g::Graph)
+function degree_distribution(g::AbstractGraph)
     k = values(degrees(g))
     N = size(g)
     k_max = maximum(k)
@@ -139,7 +143,7 @@ function delete_link!(
         error("Source $(src) node label does not exist as a key in the graph")
     end
 
-    if !haskey(g.adjacency_list, dst)
+    if !haskey(g.adjacency_list, dst) && directed
         error("Destination $(dst) node label does not exist as a key in the graph")
     end
 
@@ -181,12 +185,12 @@ end
 Return an edge-list for a graph `g`. If the network is directed the values are of the form (src, dst). If the network is un-directed, (src, dst) and (dst, src) are treated as the same entry and only one will be present in the edge list
 """
 function edges(
-    g::Graph{T};
-    directed=false) where {T<:Union{String,Integer}}
-    el::Vector{Tuple{T,T}} = []
+    g::AbstractGraph;
+    directed=false)
+    el::Vector{Tuple} = []
 
-    for key ∈ keys(g.adjacency_list), val ∈ g.adjacency_list[key]
-        push!(el, (key, val))
+    for node ∈ nodes(g), nbr ∈ neighbors(g, node)
+        push!(el, (node, nbr))
     end
 
     if !directed
@@ -203,26 +207,15 @@ end
 """
 Count the number of edges in the graph `g`
 """
-function edge_count(g::Graph; directed=false)
+function edge_count(g::AbstractGraph; directed=false)
     return length(edges(g, directed=directed))
 end
 
 """
 Returns a list of nodes in the graph `g`
 """
-function nodes(g::Graph)
+function nodes(g::AbstractGraph)
     return keys(g.adjacency_list)
 end
-
-g = Graph()
-add_link!(g, 3, 55)
-add_link!(g, 3, [33, 25, 5, 1, 2])
-add_link!(g, 2, [5, 33, 25])
-add_link!(g, 25, [55, 33])
-deg = degrees(g)
-degree_average(g)
-delete_link!(g, 3, 55)
-delete_link!(g, 3, [33, 25, 5, 1, 2])
-nodes(g)
 
 

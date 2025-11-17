@@ -1,4 +1,6 @@
+using SparseArrays: SparseMatrixCSCSymmHerm
 include("graph-dict.jl")
+include("weighted-graph-dict.jl")
 using StatsBase: sample, Weights
 
 """
@@ -114,3 +116,24 @@ function ζ_model(L::Integer, ζ::Number, k_avg::Number)
 
     return g
 end
+
+function θ_weights(g::Graph; θ=1.0)
+    k = degrees(g)
+    N = maximum(keys(k))
+
+    el = edges(g)
+    w = zeros(Float64, N, N)
+    for (i, j) ∈ el
+        w[i, j] = (k[i] * k[j])^θ
+        w[j, i] = (k[i] * k[j])^θ
+    end
+
+    return w
+end
+
+@time grph = ζ_model(150, 15, 5);
+@time wts = θ_weights(grph, θ=0.5);
+@time sprs_wts = sparse(wts)
+@time wtd_grph = weights_to_weightedGraph(sprs_wts)
+
+varinfo(r"grph|wtd_grph|wts|sprs_wts")
