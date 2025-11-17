@@ -57,8 +57,8 @@ end
 """
 Returns a dictionary where the keys are node labels, and the values are the degrees. If the graph `g` is directed, then the values represent out-degrees.
 """
-function degrees(g::AbstractGraph) where {T<:Union{String,Integer}}
-    d = Dict{T,Int}()
+function degrees(g::AbstractGraph)
+    d = Dict{keytype(g.adjacency_list),Int}()
     for key ∈ keys(g.adjacency_list)
         d[key] = length(g.adjacency_list[key])
     end
@@ -187,21 +187,13 @@ Return an edge-list for a graph `g`. If the network is directed the values are o
 function edges(
     g::AbstractGraph;
     directed=false)
-    el::Vector{Tuple} = []
+    el = Set{Tuple}()
 
     for node ∈ nodes(g), nbr ∈ neighbors(g, node)
-        push!(el, (node, nbr))
+        directed ? push!(el, (node, nbr)) : push!(el, minmax(node, nbr))
     end
 
-    if !directed
-        for (src, dst) ∈ el
-            if (dst, src) ∈ el
-                filter!(e -> e ≠ (dst, src), el)
-            end
-        end
-    end
-
-    return el
+    return collect(el)
 end
 
 """
