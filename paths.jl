@@ -13,7 +13,7 @@ end
 function dijkstra(
     g::Graph,
     srcs::Vector{U},
-    weights::Matrix{T};
+    weights::AbstractMatrix{T};
     all_paths=false,
     track_vertices=false,
     maxdist=typemax(T),
