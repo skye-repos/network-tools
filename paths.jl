@@ -1,55 +1,56 @@
-using Base: between, normalize_typevars
 include("graph.jl")
+include("weighted-graph.jl")
 using DataStructures
 
-struct DijkstraState{T<:Number,U<:Integer}
-    parents::Vector{U}
-    dists::Vector{T}
-    predecessors::Vector{Vector{U}}
-    pathcounts::Vector{Float64}
-    closest_vertices::Vector{U}
+struct DijkstraState{T<:Union{String, Integer}, U<:Number}
+    parents::Dict{T,T}
+    dists::Dict{T,U}
+    predecessors::Dict{T,Vector{T}}
+    path_counts::Dict{T,Float64}
+    closest_vertices::Vector{T}
 end
 
 function dijkstra(
-    g::Graph,
-    srcs::Vector{U},
-    weights::AbstractMatrix{T};
-    all_paths=false,
-    track_vertices=false,
-    maxdist=typemax(T),
-) where {T<:Number} where {U<:Integer}
+    g::WeightedGraph{T,U},
+    srcs::Vector{T};
+    allpaths=false,
+    trackvertices=false,
+    maxdist=typemax{U}
+) where {U<:Number} where {T<:Union{String,Integer}}
+
     N = size(g)
-    dists = fill(maxdist, size(g))
-    parents = zeros(U, N)
-    visited = zeros(Bool, N)
+    dists = DefaultDict{T,U}(maxdist)
+    parents = DefaultDict{T,T}(zero(T))
+    visited = DefaultDict{T,Bool}(false)
 
-    pathcounts = zeros(N)
-    preds = fill(Vector{U}(), N)
-    H = PriorityQueue{U,T}()
+    pathcounts = DefaultDict{T,Float64}(zero(Float64))
+    preds = DefaultDict{T,Vector{T}}(Vector{T}())
+    H = PriorityQueue{T,U}()
 
-    for src in srcs
-        dists[src] = zero(T)
+    for src ∈ srcs
+        dists[src] = zero(U)
         visited[src] = true
         pathcounts[src] = one(Float64)
-        H[src] = zero(T)
+        H[src] = zero(U)
     end
 
-    closest_vertices = Vector{U}()
+    closest_vertices = Vector{T}()
     sizehint!(closest_vertices, N)
 
     while !isempty(H)
         u = dequeue!(H)
 
-        if track_vertices
+        if trackvertices
             push!(closest_vertices, u)
         end
 
         d = dists[u]
 
-        for v in neighbors(g, u)
-            alt = d + weights[u, v]
+        for v ∈ neighbors(g, u)
+            alt = d + get_weight(g, u, v)
 
             alt > maxdist && continue
+
 
             if !visited[v]
                 visited[v] = true
@@ -58,7 +59,7 @@ function dijkstra(
 
                 pathcounts[v] += pathcounts[u]
 
-                if all_paths
+                if allpaths
                     preds[v] = [u;]
                 end
 
@@ -69,7 +70,7 @@ function dijkstra(
                 parents[v] = u
                 pathcounts[v] = pathcounts[u]
 
-                if all_paths
+                if allpaths
                     resize!(preds[v], 1)
                     preds[v][1] = u
                 end
@@ -79,22 +80,14 @@ function dijkstra(
             elseif alt == dists[v]
                 pathcounts[v] += pathcounts[u]
 
-                if all_paths
+                if allpaths
                     push!(preds[v], u)
                 end
             end
         end
     end
 
-    if track_vertices
-        for i = 1:N
-            if !visited[i]
-                push!(closest_vertices, i)
-            end
-        end
-    end
-
-    for src in srcs
+    for src ∈ srcs
         pathcounts[src] = one(Float64)
         parents[src] = 0
         empty!(preds[src])
@@ -103,121 +96,115 @@ function dijkstra(
     return DijkstraState{T,U}(parents, dists, preds, pathcounts, closest_vertices)
 end
 
-
 function dijkstra(
-    g::Graph,
-    src::Integer,
-    weights::AbstractMatrix=weights(g);
-    all_paths=false,
-    track_vertices=false,
-    maxdist=typemax(eltype(weights)),
-)
+    g::WeightedGraph{T,U},
+    src::Integer;
+    allpaths=false,
+    trackvertices=false,
+    maxdist=typemax(U)
+) where {T<:Integer} where {U<:Number}
+
     return dijkstra(
-        g, [src;], weights; all_paths=all_paths, track_vertices=track_vertices, maxdist=maxdist
-    )
+        g, [src;]; allpaths=allpaths, trackvertices=trackvertices, maxdist=maxdist)
 end
 
 function betweenness_centrality(
-    g::Graph,
-    weights::AbstractMatrix;
-    nodes::Vector{Int64}=collect(1:size(g)),
+    g::WeightedGraph{T,U};
+    nodes::Vector{T}=collect(nodes(g)),
     normalize=true,
-    end_points=false,
-)
+    endpoints=false,
+) where {T<:Union{String,Integer}} where {U<:Number}
 
     N = size(g)
     k = length(nodes)
 
-    betweenness = zeros(N)
-    preds = [Vector{Vector{Int}}() for _ ∈ 1:N]
+    betweenness = DefaultDict{T,Float64}(0)
 
-    for src in nodes
+    for src ∈ nodes
         if degrees(g)[src] > 0
-             state = dijkstra(g, src, weights, all_paths=true, track_vertices=true)
-            preds[src] = state.predecessors
-            if end_points
-                _accumulate_endpoints!(betweenness, state, g, src)
+            state = dijkstra(g, src, allpaths=true, trackvertices=true)
+            if endpoints
+                _accumulate_endpoints!(betweenness, state, src)
             else
-                _accumulate_basic!(betweenness, state, g, src)
+                _accumulate_basic!(betweenness, state, src)
             end
         end
     end
 
     _rescale!(betweenness, N, normalize, false, k)
 
-    return betweenness, preds
+    return betweenness
 end
 
 function _accumulate_basic!(
-    betweenness::Vector{Float64},
+    betweenness::AbstractDict{T,Float64},
     state::DijkstraState,
-    g::Graph,
-    si::Integer
-)
+    si::T
+) where {T<:Union{String,Integer}}
 
-    n_v = size(g)
-    δ = zeros(n_v)
-    σ = state.pathcounts
+    δ = DefaultDict{T,Float64}(0)
+    σ = state.path_counts
     P = state.predecessors
 
     P[si] = []
 
     S = reverse(state.closest_vertices)
-    for w in S
+    for w ∈ S
         coeff = (1.0 + δ[w]) / σ[w]
-        for v in P[w]
+        for v ∈ P[w]
             if v > 0
                 δ[v] += (σ[v] * coeff)
             end
         end
 
-        if w != si
+        if w ≠ si
             betweenness[w] += δ[w]
         end
     end
+
     return nothing
 end
 
 function _accumulate_endpoints!(
-    betweenness::Vector{Float64},
+    betweenness::AbstractDict{T,Float64},
     state::DijkstraState,
-    g::Graph,
-    si::Integer
-)
+    si::T
+) where {T<:Union{String,Integer}}
 
-    n_v = size(g)
-    δ = zeros(n_v)
-    σ = state.pathcounts
+    δ = DefaultDict{T,Float64}(0)
+    σ = state.path_counts
     P = state.predecessors
 
     S = reverse(state.closest_vertices)
     betweenness[si] += length(S) - 1
 
-    for w in S
+    for w ∈ S
         coeff = (1.0 + δ[w]) / σ[w]
-        for v in P[w]
+        for v ∈ P[w]
             δ[v] += σ[v] * coeff
         end
-        if w != si
+
+        if w ≠ si
             betweenness[w] += (δ[w] + 1)
         end
     end
+
 
     return nothing
 end
 
 function _rescale!(
-    betweenness::Vector{Float64},
-    n::Integer,
+    betweenness::AbstractDict{T,Float64},
+    N::Integer,
     normalize::Bool,
     directed::Bool,
     k::Integer
-)
+) where {T<:Union{String,Integer}}
 
     scale = nothing
     if normalize
-        if 2 < n
-            scale = 1.0 / ((n - 1) * (n - 2))
+        if 2 < N
+            scale = 1.0 / ((N - 1) * (N - 2))
         end
     elseif !directed
         scale = 0.5
@@ -225,67 +212,9 @@ function _rescale!(
 
     if !isnothing(scale)
         if k > 0
-            scale = scale * n / k
+            scale = scale * N / k
         end
-        betweenness = scale .* betweenness
-    end
-    return nothing
-end
-
-"""
-update the betweenness centrality incrementally. Call only after network has been updated!!
-"""
-function update_betweenness!(
-    g::Graph,
-    weights::AbstractMatrix,
-    betweenness::AbstractVector,
-    preds::AbstractVector;
-    work_rev::Vector{Vector{Int}},
-    work_aff::Vector{Int},
-    work_vis::Vector{Bool},
-    deleted_list::Vector{Int64},
-    normalize=true,
-    end_points=false,
-)
-    N = size(g)
-
-    fill!(work_vis, false)
-    empty!(work_aff)
-    @inbounds for v ∈ 1:N
-        empty!(work_rev[v])
-    end
-
-    for v ∈ 1:N, u_list ∈ preds[v], u ∈ u_list
-        push!(work_rev[v], u)
-    end
-
-    Q = Queue{Int}()
-    
-    for d ∈ deleted_list
-        work_vis[d] = true
-        enqueue!(Q, d)
-    end
-
-    while !isempty(Q)
-        u = dequeue!(Q)
-        push!(work_aff, u)
-
-        for v ∈ work_rev[u]
-            if !work_vis[v]
-                work_vis[v] = true
-                enqueue!(Q, v)
-            end
-        end
-    end
-
-    new_betw, new_pred = betweenness_centrality(g, weights,
-        nodes=work_aff,
-        normalize=normalize,
-        end_points=end_points)
-
-    for node ∈ work_aff
-        betweenness[node] = new_betw[node]
-        preds[node] = new_pred[node]
+        map!(x -> x * scale, values(betweenness))
     end
 
     return nothing
@@ -309,10 +238,11 @@ function components(label::Vector{T}) where {T<:Integer}
     return c, d
 end
 
-function connected_componenents(g::Graph)
-    label = zeros(Int, size(g))
+function connected_componenents(g::AbstractGraph)
+    N = maximum(nodes(g))
+    label = zeros(Int, N)
 
-    for u ∈ collect(1:size(g))
+    for u ∈ nodes(g)
         label[u] != 0 && continue
         label[u] = u
         Q = Vector{Int}()
@@ -334,7 +264,7 @@ function connected_componenents(g::Graph)
     return c
 end
 
-function giant_component(g::Graph)
+function giant_component(g::AbstractGraph)
     components = connected_componenents(g)
     _, i = findmax(length.(components))
 
