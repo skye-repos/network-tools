@@ -96,14 +96,14 @@ end
 Add a link to WeightedGraph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
 """
 function add_link!(
-    g::WeightedGraph{T, U},
+    g::WeightedGraph{T,U},
     src::T,
     dst::T,
     weight::U;
-    directed=false) where {T<:Union{String,Integer}} where U<:Number
+    directed=false) where {T<:Union{String,Integer}} where {U<:Number}
 
     haskey(g.adjacency_list, src) ? push!(g.adjacency_list[src], (dst, weight)) : g.adjacency_list[src] = [(dst, weight)]
-    
+
     if !directed
         haskey(g.adjacency_list, dst) ? push!(g.adjacency_list[dst], (src, weight)) : g.adjacency_list[dst] = [(src, weight)]
     end
@@ -115,10 +115,10 @@ end
 Remove a link from WeightedGraph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
 """
 function delete_link!(
-    g::Graph{T},
+    g::WeightedGraph{T,U},
     src::T,
     dst::T;
-    directed=false) where {T<:Union{String,Integer}}
+    directed=false) where {T<:Union{String,Integer}} where {U<:Number}
 
     if !haskey(g.adjacency_list, src)
         error("Source $(src) node label does not exist as a key in the graph")
@@ -132,7 +132,7 @@ function delete_link!(
     idx_src = findfirst(e -> e == src, first.(g.adjacency_list[dst]))
 
     popat!(g.adjacency_list[src], idx_dst, nothing)
-    
+
     if !directed
         popat!(g.adjacency_list[dst], idx_src, nothing)
     end
