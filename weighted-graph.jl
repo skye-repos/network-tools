@@ -67,7 +67,7 @@ function neighbors(g::WeightedGraph{T,U}, node::T) where {T<:Union{String,Intege
     if !isnothing(get(g.adjacency_list, node, nothing))
         return first.(g.adjacency_list[node])
     else
-        return nothing
+        return []
     end
 end
 

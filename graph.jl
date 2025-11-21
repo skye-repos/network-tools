@@ -64,7 +64,7 @@ function neighbors(g::Graph{T}, node::T) where {T<:Union{String,Integer}}
     if !isnothing(get(g.adjacency_list, node, nothing))
         return g.adjacency_list[node]
     else
-        return nothing
+        return []
     end
 end
 
