@@ -131,7 +131,7 @@ end
 """
 Returns a list of nodes that have links in a network `g`
 """
-function has_links(g::Graph)
+function nodes(g::Graph)
     r = []
     adj = g.adjacency_list
 

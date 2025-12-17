@@ -1,72 +1,65 @@
-using SparseArrays: SparseMatrixCSCSymmHerm
-include("graph-dict.jl")
-include("weighted-graph-dict.jl")
-using StatsBase: sample, Weights
+include("graph.jl")
 
 """
-Creates a completely connected network with `N0` nodes
+Computes the edge list for a connected graph with N0 nodes
 """
 function connected_graph(N0::Int)
-    g = Graph()
-    for i ∈ 1:N0, j ∈ i+1:N0
-        add_link!(g, i, j)
+    adjacency_list::Vector{Vector{Int}} = []
+    nodes = collect(1:N0)
+    for i = 1:N0
+        push!(adjacency_list, filter(e->e≠i, nodes))
     end
+    return Graph(adjacency_list)
+end
+
+"""
+Computes the next barabasi-albert iteration of a network `g` where a new node brings with it `m` half links.
+"""
+function ba_step!(g::Graph, m::Int64)
+    # Create a pool of nodes weighted by their degree
+    pool = vcat([fill(i, degrees(g)[i]) for i in 1:size(g)]...)
+    targets = Int[]
+    while length(targets) < m
+        v = rand(pool)
+        v ∉ targets && push!(targets, v)
+    end
+
+    for v in targets
+        push!(g.adjacency_list[v], size(g)+1)
+    end
+
+    push!(g.adjacency_list, targets)
 
     return g
 end
 
 """
-Computes the next Barabasi-Albert iteration of a network `g` where each new node brings `m` half-links
+Given an initial network `g`, computes the Barabasi-Albert graph after `n_steps` nodes are added each of which brings with it `m` half-links
 """
-function ba_step!(g::Graph{T}, m::Int64) where {T<:Union{String,Integer}}
-    # Create a pool of nodes weighted by their degree
-    old_nodes = collect(nodes(g))
-    w = collect(values(degrees(g)))
-    new_id = convert(T, size(g) + 1)
-    targets = sample(old_nodes, Weights(w), m, replace=false)
-
-    for v ∈ targets
-        add_link!(g, new_id, v)
-    end
-
-    return nothing
-end
-
-"""
-Given an initial network `g`, compute the Barabasi-Albert evolution of `g` after `n_steps` nodes are added each of which brings `m` half-links
-"""
-function barabasi_albert!(g::Graph, m::Integer, n_steps::Integer)
-    for _ ∈ 1:n_steps
+function barabasi_albert!(g::Graph, m::Int64, n_steps::Int64)
+    for _ = 1:n_steps
         ba_step!(g, m)
     end
-
-    return nothing
+    return g
 end
 
 """
 Generate Erdos-Renyi random network G(N, p)
-"""
+""" 
 function erdos_renyi(N, p)
-    g = Graph()
+    adjacency_list = [Vector{Int64}() for _ = 1:N]
+    g = Graph(adjacency_list)
 
-    n_edges = Int(ceil(N * (N - 1) * p / 2))
-    adj = g.adjacency_list
+    n_edges = Int(ceil(N*(N-1)*p/2))
 
     if p < 0.1
         for _ = 1:n_edges
-            i = Int(rand(1:N))
-            j = Int(rand(1:N))
-
-            if i ∉ nodes(g)
-                add_link!(g, i, j)
-            elseif j ∉ nodes(g)
-                add_link!(g, i, j)
-            else
-                while j ∈ adj[i]
-                    j = Int(rand(1:N))
-                end
-                add_link!(g, i, j)
+            i = Int.(rand(1:N))
+            j = Int.(rand(1:N))
+            while j ∈ adjacency_list[i]
+                j = Int.(rand(1:N))
             end
+            add_link!(g, Int(i), Int(j))
         end
     else
         for i = 1:N
@@ -85,7 +78,6 @@ end
 Generate a ζ-model network of side length `L`, characteristic link-length of
 `ζ`, and average degree `k`
 """
-
 function ζ_model(L::Integer, ζ::Number, k_avg::Number)
     local N = L^2
 
@@ -116,25 +108,3 @@ function ζ_model(L::Integer, ζ::Number, k_avg::Number)
 
     return g
 end
-
-# function θ_weights(g::Graph; θ=1.0)
-#     k = degrees(g)
-#     N = maximum(keys(g.adjacency_list))
-
-#     el = edges(g)
-#     w = zeros(Float64, N, N)
-#     for (i, j) ∈ el
-#         w[i, j] = (k[i] * k[j])^θ
-#         w[j, i] = (k[i] * k[j])^θ
-#     end
-
-#     return sparse(w) 
-# end
-
-
-# @time grph = ζ_model(50, 15, 5);
-# @time wts = θ_weights(grph, θ=0.5);
-# @time wtd_grph = weights_to_weightedGraph(wts);
-# include("paths-dict.jl");
-
-# @time loads = betweenness_centrality(wtd_grph, normalize=false);

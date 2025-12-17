@@ -232,65 +232,6 @@ function _rescale!(
     return nothing
 end
 
-"""
-update the betweenness centrality incrementally. Call only after network has been updated!!
-"""
-function update_betweenness!(
-    g::Graph,
-    weights::AbstractMatrix,
-    betweenness::AbstractVector,
-    preds::AbstractVector;
-    work_rev::Vector{Vector{Int}},
-    work_aff::Vector{Int},
-    work_vis::Vector{Bool},
-    deleted_list::Vector{Int64},
-    normalize=true,
-    end_points=false,
-)
-    N = size(g)
-
-    fill!(work_vis, false)
-    empty!(work_aff)
-    @inbounds for v ∈ 1:N
-        empty!(work_rev[v])
-    end
-
-    for v ∈ 1:N, u_list ∈ preds[v], u ∈ u_list
-        push!(work_rev[v], u)
-    end
-
-    Q = Queue{Int}()
-    
-    for d ∈ deleted_list
-        work_vis[d] = true
-        enqueue!(Q, d)
-    end
-
-    while !isempty(Q)
-        u = dequeue!(Q)
-        push!(work_aff, u)
-
-        for v ∈ work_rev[u]
-            if !work_vis[v]
-                work_vis[v] = true
-                enqueue!(Q, v)
-            end
-        end
-    end
-
-    new_betw, new_pred = betweenness_centrality(g, weights,
-        nodes=work_aff,
-        normalize=normalize,
-        end_points=end_points)
-
-    for node ∈ work_aff
-        betweenness[node] = new_betw[node]
-        preds[node] = new_pred[node]
-    end
-
-    return nothing
-end
-
 function components(label::Vector{T}) where {T<:Integer}
     d = Dict{T,T}()
     c = Vector{Vector{T}}()

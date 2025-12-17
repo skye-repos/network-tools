@@ -1,31 +1,30 @@
 abstract type AbstractGraph end
+
 """
-Un-weighted Graph object specified a dictionary where keys (node labels) have values that are vectors of node labels. Note that if the graph is directed, the key stores the out-links in the values
+An un-directed graph for a simple network specified by an adjacency list (no multi-links)
 """
-mutable struct Graph{T} <: AbstractGraph where {T<:Union{String,Integer}}
-    adjacency_list::Dict{T,Vector{T}}
+mutable struct Graph <: AbstractGraph
+    adjacency_list::Vector{Vector{Int64}}
 end
 
 """
-Default Graph constructor to give integer valued node labels
+Gets the number of nodes in the network `g`
 """
-function Graph()
-    return Graph(Dict{Int,Vector{Int}}())
+function size(g::Graph)
+    return length(g.adjacency_list)
 end
 
 """
-Converts an vector of adjacency lists to a dictionary where the value attached to a key (a node label) are the (out)neighbors of the node.
+Gets a vector of node degrees for a network `g`
 """
-function adjacency_to_graph(adjacency::Vector{Vector{T}}) where {T<:Integer}
-    dict = Dict{T,Vector{T}}()
-
-    for i ∈ eachindex(adjacency)
-        if adjacency[i] ≠ []
-            get!(dict, i, adjacency[i])
-        end
+function degrees(g::Graph)
+    N = size(g)
+    d = zeros(Int64, N)
+	for (i, list) in enumerate(g.adjacency_list)
+        d[i] = length(list)
     end
 
-    return Graph(dict)
+    return d
 end
 
 """
@@ -37,54 +36,17 @@ function copy(g::Graph)
 end
 
 """
-Gets the number of nodes in the network `g`
+Returns a vector of neighbors for `node` in network `g`
 """
-function size(g::AbstractGraph)
-    return length(keys(g.adjacency_list))
-end
-
-"""
-Returns a list of nodes in the graph `g`
-"""
-function nodes(g::AbstractGraph)
-    return keys(g.adjacency_list)
-end
-
-"""
-Returns maximum label value for a graph `g`
-"""
-function largest_node(g::AbstractGraph)
-	return maximum(nodes(g))
-end
-
-"""
-Returns a vector of neighbors for `node` in graph `g`. If the graph was directed, the vector is a list of in-neighbors
-"""
-function neighbors(g::Graph{T}, node::T) where {T<:Union{String,Integer}}
-    if !isnothing(get(g.adjacency_list, node, nothing))
-        return g.adjacency_list[node]
-    else
-        return []
-    end
-end
-
-"""
-Returns a dictionary where the keys are node labels, and the values are the degrees. If the graph `g` is directed, then the values represent out-degrees.
-"""
-function degrees(g::AbstractGraph)
-    d = Dict{keytype(g.adjacency_list),Int}()
-    for key ∈ keys(g.adjacency_list)
-        d[key] = length(g.adjacency_list[key])
-    end
-
-    return d
+function neighbors(g::Graph, node::Int64)
+    return g.adjacency_list[node]
 end
 
 """
 Average degree of a network `g`
 """
-function degree_average(g::AbstractGraph)
-    return sum(values(degrees(g))) / size(g)
+function k_average(g::Graph)
+    return sum(degrees(g)) / size(g)
 end
 
 """
@@ -92,116 +54,54 @@ Compute the degree distribution of a network `g`.
 Returns two objects - the first is the list of degrees
 and the second is the distribution
 """
-function degree_distribution(g::AbstractGraph)
-    k = values(degrees(g))
-    N = size(g)
-    k_max = maximum(k)
-    k_min = minimum(k)
+function degree_distribution(g::Graph)
+    k_max = maximum(degrees(g))
+    k_min = minimum(degrees(g))
     p = zeros(k_max)
-    for value ∈ k
+    for k ∈ degrees(g)
         if k ≠ 0
-            p[value] += 1 / N
+            p[k] += 1 / size(g)
         end
     end
-
+    
     k_min == 0 ? k_min = 1 : nothing
-
+    
     return collect(k_min:k_max), p[k_min:k_max]
 end
 
 """
-Add a link to graph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
+Modify a graph `g` in-place to remove a link between (`n1`, `n2`)
 """
-function add_link!(
-    g::Graph{T},
-    src::T,
-    dst::T;
-    directed=false) where {T<:Union{String,Integer}}
-
-    haskey(g.adjacency_list, src) ? push!(g.adjacency_list[src], dst) : g.adjacency_list[src] = [dst]
-
-    if !directed
-        haskey(g.adjacency_list, dst) ? push!(g.adjacency_list[dst], src) : g.adjacency_list[dst] = [src]
-    end
-
+function remove_link!(g::Graph, n1::Int64, n2::Int64)
+    g.adjacency_list[n1] = filter(e -> e ≠ n2, g.adjacency_list[n1])
+    g.adjacency_list[n2] = filter(e -> e ≠ n1, g.adjacency_list[n2])
     return nothing
 end
 
 """
-Add a link to graph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
+Modify a graph `g` in-place to add a link between (`n1`, `n2`)
 """
-function add_link!(
-    g::AbstractGraph,
-    src::T,
-    dsts::Vector{T};
-    directed=false) where {T<:Union{String,Integer}}
-
-    for dst ∈ dsts
-        add_link!(g, src, dst, directed=directed)
+function add_link!(g::Graph, n1::Int64, n2::Int64)
+    if n1 > size(g) || n2 > size(g)
+        resize!(g.adjacency_list, max(n1, n2))
+        g.adjacency_list[n1] = Vector{Int}()
+        g.adjacency_list[n2] = Vector{Int}()
+        push!(g.adjacency_list[n1], n2)
+        push!(g.adjacency_list[n2], n1)
+    else
+        push!(g.adjacency_list[n1], n2)
+        push!(g.adjacency_list[n2], n1)
     end
-
     return nothing
 end
 
 """
-Remove a link from graph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
+Get the edge-list from the adjacency list of a graph `g`
 """
-function delete_link!(
-    g::Graph{T},
-    src::T,
-    dst::T;
-    directed=false) where {T<:Union{String,Integer}}
-
-    if !haskey(g.adjacency_list, src)
-        error("Source $(src) node label does not exist as a key in the graph")
-    end
-
-    if !haskey(g.adjacency_list, dst) && directed
-        error("Destination $(dst) node label does not exist as a key in the graph")
-    end
-
-    filter!(e -> e ≠ dst, g.adjacency_list[src])
-
-    if !directed
-        filter!(e -> e ≠ src, g.adjacency_list[dst])
-    end
-
-    if g.adjacency_list[src] == []
-        delete!(g.adjacency_list, src)
-    end
-
-    if g.adjacency_list[dst] == []
-        delete!(g.adjacency_list, dst)
-    end
-
-    return nothing
-end
-
-"""
-Remove a link from graph `g` who's directedness is `directed` between `src` and `dst` or between `src` and a list of nodes specified by `dsts`
-"""
-function delete_link!(
-    g::AbstractGraph,
-    src::T,
-    dsts::Vector{T};
-    directed=false) where {T<:Union{String,Integer}}
-
-    for dst ∈ dsts
-        delete_link!(g, src, dst, directed=directed)
-    end
-
-    return nothing
-end
-
-"""
-Return an edge-list for a graph `g`. If the network is directed the values are of the form (src, dst). If the network is un-directed, (src, dst) and (dst, src) are treated as the same entry and only one will be present in the edge list
-"""
-function edges(
-    g::AbstractGraph;
-    directed=false)
+function edges(g::Graph; directed=false)
     el = Set{Tuple}()
 
-    for node ∈ nodes(g), nbr ∈ neighbors(g, node)
+    for node ∈ has_links(g), nbr ∈ neighbors(g, node)
         directed ? push!(el, (node, nbr)) : push!(el, minmax(node, nbr))
     end
 
@@ -211,6 +111,35 @@ end
 """
 Count the number of edges in the graph `g`
 """
-function edge_count(g::AbstractGraph; directed=false)
-    return length(edges(g, directed=directed))
+function edge_count(g::Graph)
+    return length(edges(g))
+end
+
+"""
+Converts an edge-list to a graph
+"""
+function graph_from_edges(el::Vector{Tuple})
+    N = max(maximum(first.(el)), maximum(last.(el)))
+    adj = [Vector{Int}() for _ = 1:N]
+    g = Graph(adj)
+    for (i, j) in el
+        add_link!(g, Int(i), Int(j))
+    end
+    return g
+end
+
+"""
+Returns a list of nodes that have links in a network `g`
+"""
+function nodes(g::Graph)
+    r = []
+    adj = g.adjacency_list
+
+    for i ∈ eachindex(adj)
+        if adj[i] ≠ []
+            push!(r, i)
+        end
+    end
+        
+    return r
 end

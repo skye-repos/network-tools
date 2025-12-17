@@ -73,3 +73,38 @@ function erdos_renyi(N, p)
     end
     return g
 end
+
+"""
+Generate a ζ-model network of side length `L`, characteristic link-length of
+`ζ`, and average degree `k`
+"""
+function ζ_model(L::Integer, ζ::Number, k_avg::Number)
+    local N = L^2
+
+    coords = Vector{Tuple{Int, Int}}()
+
+    for i ∈ 1:L, j ∈ 1:L
+        push!(coords, (i, j))
+    end
+
+    @inline function distance(a::Tuple{Int, Int}, b::Tuple{Int, Int})
+        x = min(abs(a[1] - b[1]), L - abs(a[1] - b[1]))
+        y = min(abs(a[2] - b[2]), L - abs(a[2] - b[2]))
+        return sqrt(x^2 + y^2)
+    end
+
+    P = zeros(N, N)
+    @inbounds for j ∈ 1:N, i ∈ 1:j-1
+        P[i, j] = exp(-distance(coords[i], coords[j]) / ζ)
+    end
+
+    P .*= (N * k_avg / 2) / sum(P)
+
+    g = Graph()
+
+    @inbounds for j ∈ 1:N, i ∈ 1:j-1
+        rand() < P[i, j] && add_link!(g, Int(i), Int(j))
+    end
+
+    return g
+end
