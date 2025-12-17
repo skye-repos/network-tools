@@ -23,3 +23,4 @@ I think it might be worth converting the entire library to use sparse matrices i
 - Dictionary based approach for constant time insert and read
 - Modified Implementation of Dijkstras' algorithm inspired from =Graph.jl= to work with my Dict
 - Connected components detection also appropriated from =Graph.jl=
+- Unsurprisingly, the vector implementation is faster and is thus the default.
