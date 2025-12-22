@@ -100,7 +100,7 @@ function ζ_model(L::Integer, ζ::Number, k_avg::Number)
 
     P .*= (N * k_avg / 2) / sum(P)
 
-    g = Graph()
+    g = Graph([Vector{Int64}() for _ ∈ 1:N])
 
     @inbounds for j ∈ 1:N, i ∈ 1:j-1
         rand() < P[i, j] && add_link!(g, Int(i), Int(j))

@@ -129,12 +129,14 @@ function betweenness_centrality(
     k = length(nodes)
 
     betweenness = zeros(N)
-    preds = [Vector{Vector{Int}}() for _ ∈ 1:N]
+    dists = fill(Inf, (N, N))
+    pathcounts = fill(0, (N, N))
 
     for src in nodes
         if degrees(g)[src] > 0
-             state = dijkstra(g, src, weights, all_paths=true, track_vertices=true)
-            preds[src] = state.predecessors
+            state = dijkstra(g, src, weights, all_paths=true, track_vertices=true)
+            dists[src, :] = state.dists
+            pathcounts[src, :] = state.pathcounts
             if end_points
                 _accumulate_endpoints!(betweenness, state, g, src)
             else
@@ -145,7 +147,7 @@ function betweenness_centrality(
 
     _rescale!(betweenness, N, normalize, false, k)
 
-    return betweenness, preds
+    return betweenness, dists, pathcounts
 end
 
 function _accumulate_basic!(

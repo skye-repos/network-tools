@@ -101,7 +101,7 @@ Get the edge-list from the adjacency list of a graph `g`
 function edges(g::Graph; directed=false)
     el = Set{Tuple}()
 
-    for node ∈ has_links(g), nbr ∈ neighbors(g, node)
+    for node ∈ nodes(g), nbr ∈ neighbors(g, node)
         directed ? push!(el, (node, nbr)) : push!(el, minmax(node, nbr))
     end
 
