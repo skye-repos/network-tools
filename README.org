@@ -20,6 +20,10 @@ I think it might be worth converting the entire library to use sparse matrices i
 - Some Graph specific methods:
   - Graphs: adjacency_to_graph converts a vector of adjacencies to a =Graph= object
   - WeightedGraph: weights_to_weightedGraph, weightedGraph_to_weights convert between a matrix of weights and a =WeightedGraph= object
+- Distances & Measures
+  - Dijkstra's
+  - Betweenness Centrality
+  - Incremental Betweenness Updates for single edge insertion/weight decrease ([[https:https://arxiv.org/abs/1704.08592][iBet paper E. Bergamini et.al.]])
 - Dictionary based approach for constant time insert and read
 - Modified Implementation of Dijkstras' algorithm inspired from =Graph.jl= to work with my Dict
 - Connected components detection also appropriated from =Graph.jl=
