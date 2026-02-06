@@ -6,16 +6,16 @@ I think it might be worth converting the entire library to use sparse matrices i
 * List of Features
 - AbstractGraph containing =Graph=, =WeightedGraph=
 - Basic methods for manipulating and getting details of both
-  - nodes: Returns a KeySet of nodes in the network
+  - nodes: Returns a Set of nodes in the network
   - neighbor: Returns the neighbors of a node as a vector
   - degrees: Returns a dictionary of the form {node : degree}
   - degree_average: Average degree of the network
   - degree_distribution: returns a pair of vectors specifying degrees, and frequencies respectively
   - add, delete link(s): self-explanatory
   - edges: Return an edge-list
-  - edge_count: Count of edges
+  - ne: Count of edges
   - copy: Create a copy of a graph that can be operated independently
-  - size: number of nodes of a graph
+  - nv: number of nodes of a graph
   - largest_node: node with largest label (useful for integer index networks where you wish to loop over N)
 - Some Graph specific methods:
   - Graphs: adjacency_to_graph converts a vector of adjacencies to a =Graph= object
@@ -28,3 +28,7 @@ I think it might be worth converting the entire library to use sparse matrices i
 - Modified Implementation of Dijkstras' algorithm inspired from =Graph.jl= to work with my Dict
 - Connected components detection also appropriated from =Graph.jl=
 - Unsurprisingly, the vector implementation is faster and is thus the default.
+
+* Future optimizations
+- For Simple graphs, make graph struct a Vector of Sets
+- Adapt Struct to allow arbitrary node labels
