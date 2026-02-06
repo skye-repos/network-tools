@@ -10,7 +10,7 @@ function find_affected_sources(
     d::AbstractMatrix,
     )
 
-    N = size(g)
+    N = nv(g)
     affected = Set{Int64}()
     visited = falses(N)
 
@@ -46,7 +46,7 @@ function iBet_betweenness_update!(
     betweenness::Vector{Float64},
     )
 
-    N = size(g)
+    N = nv(g)
     visited = falses(N)
     S = [Set{Int64}() for _ ∈ 1:N]
 
@@ -124,7 +124,7 @@ function iBet_dependency_accumulation!(
     mode::Symbol
     )
     
-    N = size(g)
+    N = nv(g)
     Δ = zeros(N)
 
     while !isempty(PQ)

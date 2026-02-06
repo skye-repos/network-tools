@@ -1,6 +1,7 @@
 using Base: between, normalize_typevars
 include("graph.jl")
 using DataStructures
+using StatsBase
 
 struct DijkstraState{T<:Number,U<:Integer}
     parents::Vector{U}
@@ -18,8 +19,8 @@ function dijkstra(
     track_vertices=false,
     maxdist=typemax(T),
 ) where {T<:Number} where {U<:Integer}
-    N = size(g)
-    dists = fill(maxdist, size(g))
+    N = nv(g)
+    dists = fill(maxdist, nv(g))
     parents = zeros(U, N)
     visited = zeros(Bool, N)
 
@@ -120,23 +121,19 @@ end
 function betweenness_centrality(
     g::Graph,
     weights::AbstractMatrix;
-    nodes::Vector{Int64}=collect(1:size(g)),
+    node_list::Vector{Int64}=collect(1:nv(g)),
     normalize=true,
     end_points=false,
 )
 
-    N = size(g)
-    k = length(nodes)
+    N = nv(g)
+    k = length(node_list)
 
     betweenness = zeros(N)
-    dists = fill(Inf, (N, N))
-    pathcounts = fill(0, (N, N))
-
-    for src in nodes
+    
+    for src in node_list
         if degrees(g)[src] > 0
             state = dijkstra(g, src, weights, all_paths=true, track_vertices=true)
-            dists[src, :] = state.dists
-            pathcounts[src, :] = state.pathcounts
             if end_points
                 _accumulate_endpoints!(betweenness, state, g, src)
             else
@@ -147,8 +144,23 @@ function betweenness_centrality(
 
     _rescale!(betweenness, N, normalize, false, k)
 
-    return betweenness, dists, pathcounts
+    return betweenness
 end
+
+function betweenness_centrality_sample(
+    g::Graph,
+    weights::AbstractMatrix;
+    k::Int=100,
+    normalize=true,
+    end_points=false)
+
+    return betweenness_centrality(
+        g, weights;
+        node_list = sample(collect(nodes(g)), k; replace = false),
+        normalize = normalize,
+        end_points = end_points)
+end
+
 
 function _accumulate_basic!(
     betweenness::Vector{Float64},
@@ -157,7 +169,7 @@ function _accumulate_basic!(
     si::Integer
 )
 
-    n_v = size(g)
+    n_v = nv(g)
     δ = zeros(n_v)
     σ = state.pathcounts
     P = state.predecessors
@@ -187,7 +199,7 @@ function _accumulate_endpoints!(
     si::Integer
 )
 
-    n_v = size(g)
+    n_v = nv(g)
     δ = zeros(n_v)
     σ = state.pathcounts
     P = state.predecessors
@@ -253,9 +265,9 @@ function components(label::Vector{T}) where {T<:Integer}
 end
 
 function connected_componenents(g::Graph)
-    label = zeros(Int, size(g))
+    label = zeros(Int, nv(g))
 
-    for u ∈ collect(1:size(g))
+    for u ∈ collect(1:nv(g))
         label[u] != 0 && continue
         label[u] = u
         Q = Vector{Int}()

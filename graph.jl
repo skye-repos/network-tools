@@ -10,7 +10,7 @@ end
 """
 Gets the number of nodes in the network `g`
 """
-function size(g::Graph)
+function nv(g::Graph)
     return length(g.adjacency_list)
 end
 
@@ -18,7 +18,7 @@ end
 Gets a vector of node degrees for a network `g`
 """
 function degrees(g::Graph)
-    N = size(g)
+    N = nv(g)
     d = zeros(Int64, N)
 	for (i, list) in enumerate(g.adjacency_list)
         d[i] = length(list)
@@ -46,7 +46,7 @@ end
 Average degree of a network `g`
 """
 function k_average(g::Graph)
-    return sum(degrees(g)) / size(g)
+    return sum(degrees(g)) / nv(g)
 end
 
 """
@@ -60,7 +60,7 @@ function degree_distribution(g::Graph)
     p = zeros(k_max)
     for k ∈ degrees(g)
         if k ≠ 0
-            p[k] += 1 / size(g)
+            p[k] += 1 / nv(g)
         end
     end
     
@@ -82,7 +82,7 @@ end
 Modify a graph `g` in-place to add a link between (`n1`, `n2`)
 """
 function add_link!(g::Graph, n1::Int64, n2::Int64)
-    if n1 > size(g) || n2 > size(g)
+    if n1 > nv(g) || n2 > nv(g)
         resize!(g.adjacency_list, max(n1, n2))
         g.adjacency_list[n1] = Vector{Int}()
         g.adjacency_list[n2] = Vector{Int}()
@@ -109,13 +109,6 @@ function edges(g::Graph; directed=false)
 end
 
 """
-Count the number of edges in the graph `g`
-"""
-function edge_count(g::Graph)
-    return length(edges(g))
-end
-
-"""
 Converts an edge-list to a graph
 """
 function graph_from_edges(el::Vector{Tuple})
@@ -131,15 +124,30 @@ end
 """
 Returns a list of nodes that have links in a network `g`
 """
-function nodes(g::Graph)
-    r = []
+function nodes(g::Graph; directed = false)
+    r = Set{Int}()
     adj = g.adjacency_list
 
     for i ∈ eachindex(adj)
         if adj[i] ≠ []
             push!(r, i)
         end
+
+        if directed
+            for j ∈ eachindex(adj)
+                if i ∈ adj[j]
+                    push!(r, i)
+                end
+            end
+        end
     end
         
     return r
+end
+
+"""
+Count the number of edges in the graph `g`
+"""
+function ne(g::Graph)
+    return length(edges(g))
 end
