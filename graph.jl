@@ -1,21 +1,35 @@
 abstract type AbstractGraph end
 
 """
-An un-directed graph for a simple network specified by an adjacency list (no multi-links)
+An un-directed Graph for a simple network specified by an adjacency list (no multi-links)
 """
 mutable struct Graph <: AbstractGraph
     adjacency_list::Vector{Vector{Int64}}
 end
 
 """
-Gets the number of nodes in the network `g`
+    Graph(N = 1)
+
+Construct a network with one node and no links by default. Optionally specify `N'
+as the number of nodes.
+"""
+function Graph(N = 1)
+	return Graph([Int64[] for _ ∈ 1:N])
+end
+
+"""
+    nv(g::Graph)
+
+Number of nodes in the network `g`
 """
 function nv(g::Graph)
     return length(g.adjacency_list)
 end
 
 """
-Gets a vector of node degrees for a network `g`
+    degrees(g::Graph)
+
+Vector of degrees for a network `g`
 """
 function degrees(g::Graph)
     N = nv(g)
@@ -28,7 +42,9 @@ function degrees(g::Graph)
 end
 
 """
-Create a copy of a mutable graph
+    copy(g::Graph)
+
+Create a copy of a mutable Graph
 """
 function copy(g::Graph)
     a = Base.deepcopy(g.adjacency_list)
@@ -36,6 +52,8 @@ function copy(g::Graph)
 end
 
 """
+    neighbors(g::Graph, node::Int64)
+
 Returns a vector of neighbors for `node` in network `g`
 """
 function neighbors(g::Graph, node::Int64)
@@ -43,13 +61,17 @@ function neighbors(g::Graph, node::Int64)
 end
 
 """
+    degree_average(g::Graph)
+
 Average degree of a network `g`
 """
-function k_average(g::Graph)
+function degree_average(g::Graph)
     return sum(degrees(g)) / nv(g)
 end
 
 """
+    degree_distribution(g::Graph)
+
 Compute the degree distribution of a network `g`.
 Returns two objects - the first is the list of degrees
 and the second is the distribution
@@ -70,7 +92,9 @@ function degree_distribution(g::Graph)
 end
 
 """
-Modify a graph `g` in-place to remove a link between (`n1`, `n2`)
+    remove_link!(g::Graph, n1::Int64, n2::Int64)
+
+Modify a network `g` in-place to remove a link between (`n1`, `n2`)
 """
 function remove_link!(g::Graph, n1::Int64, n2::Int64)
     g.adjacency_list[n1] = filter(e -> e ≠ n2, g.adjacency_list[n1])
@@ -79,7 +103,9 @@ function remove_link!(g::Graph, n1::Int64, n2::Int64)
 end
 
 """
-Modify a graph `g` in-place to add a link between (`n1`, `n2`)
+    add_link!(g::Graph, n1::Int64, n2::Int64)
+
+Modify a network `g` in-place to add a link between (`n1`, `n2`)
 """
 function add_link!(g::Graph, n1::Int64, n2::Int64)
     if n1 > nv(g) || n2 > nv(g)
@@ -96,7 +122,9 @@ function add_link!(g::Graph, n1::Int64, n2::Int64)
 end
 
 """
-Get the edge-list from the adjacency list of a graph `g`
+    edges(g::Graph; directed=false)
+
+Get the edge-list from the adjacency list of a network `g`
 """
 function edges(g::Graph; directed=false)
     el = Set{Tuple}()
@@ -109,7 +137,9 @@ function edges(g::Graph; directed=false)
 end
 
 """
-Converts an edge-list to a graph
+    graph_from_edges(el::Vector{Tuple})
+
+Converts an edge-list to a Graph
 """
 function graph_from_edges(el::Vector{Tuple})
     N = max(maximum(first.(el)), maximum(last.(el)))
@@ -122,7 +152,9 @@ function graph_from_edges(el::Vector{Tuple})
 end
 
 """
-Returns a list of nodes that have links in a network `g`
+    nodes(g::Graph; directed = false)
+
+Set of nodes that have links in a network `g`. Use collect for vector/array.
 """
 function nodes(g::Graph; directed = false)
     r = Set{Int}()
@@ -146,7 +178,9 @@ function nodes(g::Graph; directed = false)
 end
 
 """
-Count the number of edges in the graph `g`
+    ne(g::Graph)
+
+Number of edges in the network `g`
 """
 function ne(g::Graph)
     return length(edges(g))
