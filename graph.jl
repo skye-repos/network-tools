@@ -97,8 +97,16 @@ end
 Modify a network `g` in-place to remove a link between (`n1`, `n2`)
 """
 function remove_link!(g::Graph, n1::Int64, n2::Int64)
-    g.adjacency_list[n1] = filter(e -> e ≠ n2, g.adjacency_list[n1])
-    g.adjacency_list[n2] = filter(e -> e ≠ n1, g.adjacency_list[n2])
+    idx1 = findfirst(v -> v == n2, g.adjacency_list[n1])
+    if idx1 ≠ nothing
+        deleteat!(g.adjacency_list[n1], idx1)
+    end
+
+    idx2 = findfirst(v -> v == n1, g.adjacency_list[n2])
+    if idx2 ≠ nothing
+        deleteat!(g.adjacency_list[n2], idx2)
+    end
+    
     return nothing
 end
 
@@ -108,16 +116,20 @@ end
 Modify a network `g` in-place to add a link between (`n1`, `n2`)
 """
 function add_link!(g::Graph, n1::Int64, n2::Int64)
-    if n1 > nv(g) || n2 > nv(g)
-        resize!(g.adjacency_list, max(n1, n2))
-        g.adjacency_list[n1] = Vector{Int}()
-        g.adjacency_list[n2] = Vector{Int}()
-        push!(g.adjacency_list[n1], n2)
-        push!(g.adjacency_list[n2], n1)
-    else
-        push!(g.adjacency_list[n1], n2)
-        push!(g.adjacency_list[n2], n1)
+    max_n = max(n1, n2)
+
+    if nv(g) < max_n
+        old_nv = nv(g)
+        resize!(g.adjacency_list, max_n)
+
+        for i ∈ (old_nv + 1):max_n
+            g.adjacency_list[i] = Int64[]
+        end
     end
+    
+    push!(g.adjacency_list[n1], n2)
+    push!(g.adjacency_list[n2], n1)
+
     return nothing
 end
 

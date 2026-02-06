@@ -6,48 +6,36 @@ include("graph.jl")
 Computes the edge list for a connected graph with N0 nodes
 """
 function connected_graph(N0::Int)
-    adjacency_list::Vector{Vector{Int}} = []
-    nodes = collect(1:N0)
-    for i = 1:N0
-        push!(adjacency_list, filter(e -> e ≠ i, nodes))
+    g = Graph(N0)
+    for i ∈ 1:N0, j ∈ i+1:N0
+        add_link!(g, i, j)
     end
-    return Graph(adjacency_list)
-end
-
-"""
-    ba_step!(g::Graph, m::Int64)
-
-Computes the next barabasi-albert iteration of a network `g` where a new node
-brings with it `m` half links.
-"""
-function ba_step!(g::Graph, m::Int64)
-    # Create a pool of nodes weighted by their degree
-    pool = vcat([fill(i, degrees(g)[i]) for i in 1:nv(g)]...)
-    targets = Int[]
-    while length(targets) < m
-        v = rand(pool)
-        v ∉ targets && push!(targets, v)
-    end
-
-    for v in targets
-        push!(g.adjacency_list[v], nv(g) + 1)
-    end
-
-    push!(g.adjacency_list, targets)
-
     return g
 end
 
 """
-    barabasi_albert!(g::Graph, m::Int64, n_steps::Int64)
+    barabasi_albert(m::Integer, N::Integer)
 
-Given an initial network `g`, computes the Barabasi-Albert graph after `n_steps`
-nodes are added each of which brings with it `m` half-links
+Generate a scale-free barabasi-albert graph with `N' nodes and `m' links per new node
 """
-function barabasi_albert!(g::Graph, m::Int64, n_steps::Int64)
-    for _ = 1:n_steps
-        ba_step!(g, m)
+function barabasi_albert(m::Integer, N::Integer)
+    g = connected_graph(m+1)   
+    pool = vcat([fill(i, degrees(g)[i]) for i in 1:nv(g)]...)
+
+    for source ∈ m+2:N
+        targets = Set{Int64}()
+
+        while length(targets) < m
+            push!(targets, rand(pool))
+        end
+
+        for t ∈ targets
+            add_link!(g, source, t)
+            push!(pool, t)
+            push!(pool, source)
+        end
     end
+
     return g
 end
 
